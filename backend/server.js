@@ -13,12 +13,14 @@ const inventoryRoutes = require("./routes/inventoryRoutes");
 const distributionRoutes = require("./routes/distributionRoutes");
 const employeeRoutes = require('./routes/employeeRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const authRoutes = require("./routes/authRoutes");
 
 app.use("/api/beneficiaries", beneficiaryRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/distributions", distributionRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use("/api/auth", authRoutes);
 // Connect to MongoDB
 mongoose
     .connect(process.env.MONGO_DB_URI)

@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
@@ -6,7 +7,11 @@ const Beneficiary = require("../models/Beneficiary");
 const Inventory = require("../models/Inventory");
 const Distribution = require("../models/Distribution");
 
-// Issue ration to a beneficiary
+// ==========================================
+// ISSUE RATION TO A BENEFICIARY
+// POST /api/distributions
+// ==========================================
+
 router.post("/", async (req, res) => {
     const { beneficiaryId, items, distributedBy } = req.body;
 
@@ -16,11 +21,11 @@ router.post("/", async (req, res) => {
         items.length === 0
     ) {
         return res.status(400).json({
-            message: "A valid beneficiary ID and at least one item are required"
+            message:
+                "A valid beneficiary ID and at least one item are required."
         });
     }
 
-    // Validate every item before changing stock
     for (const item of items) {
         if (
             !mongoose.isValidObjectId(item.inventoryItem) ||
@@ -28,7 +33,8 @@ router.post("/", async (req, res) => {
             item.quantity <= 0
         ) {
             return res.status(400).json({
-                message: "Each item needs a valid inventory ID and a positive quantity"
+                message:
+                    "Each item needs a valid inventory ID and a positive quantity."
             });
         }
     }
@@ -38,15 +44,12 @@ router.post("/", async (req, res) => {
 
         if (!beneficiary || beneficiary.status !== "Active") {
             return res.status(404).json({
-                message: "Active beneficiary not found"
+                message: "Active beneficiary not found."
             });
         }
 
         const distributionItems = [];
         let totalAmount = 0;
-
-        // Reserve stock using conditional atomic updates.
-        // If any item fails, restore stock already reserved.
         const reserved = [];
 
         try {
@@ -57,7 +60,9 @@ router.post("/", async (req, res) => {
                         quantity: { $gte: requestedItem.quantity }
                     },
                     {
-                        $inc: { quantity: -requestedItem.quantity }
+                        $inc: {
+                            quantity: -requestedItem.quantity
+                        }
                     },
                     {
                         new: true
@@ -83,7 +88,8 @@ router.post("/", async (req, res) => {
                     pricePerUnit: inventory.pricePerUnit
                 });
 
-                totalAmount += requestedItem.quantity * inventory.pricePerUnit;
+                totalAmount +=
+                    requestedItem.quantity * inventory.pricePerUnit;
             }
 
             const distribution = await Distribution.create({
@@ -94,15 +100,19 @@ router.post("/", async (req, res) => {
             });
 
             return res.status(201).json({
-                message: "Ration distributed successfully",
+                message: "Ration distributed successfully.",
                 distribution
             });
         } catch (error) {
-            // Restore all stock reserved by this request if it fails.
+            // Restore stock if creating the distribution fails.
             for (const entry of reserved) {
                 await Inventory.updateOne(
                     { _id: entry.inventoryItem },
-                    { $inc: { quantity: entry.quantity } }
+                    {
+                        $inc: {
+                            quantity: entry.quantity
+                        }
+                    }
                 );
             }
 
@@ -124,24 +134,81 @@ router.post("/", async (req, res) => {
         console.error("Distribution error:", error.message);
 
         return res.status(500).json({
-            message: "Failed to record ration distribution"
+            message: "Failed to record ration distribution."
         });
     }
 });
 
-// Get distribution history
+// ==========================================
+// GET ALL DISTRIBUTIONS
+// GET /api/distributions
+// Existing admin/employee history endpoint
+// ==========================================
+
 router.get("/", async (req, res) => {
     try {
         const distributions = await Distribution.find()
             .populate("beneficiary", "rationCardNumber fullName")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
-        res.status(200).json(distributions);
+        return res.status(200).json(distributions);
     } catch (error) {
         console.error("Fetch distributions error:", error.message);
 
-        res.status(500).json({
-            message: "Failed to fetch distribution history"
+        return res.status(500).json({
+            message: "Failed to fetch distribution history."
+        });
+    }
+});
+
+// ==========================================
+// GET DISTRIBUTIONS FOR ONE BENEFICIARY
+// GET /api/distributions/beneficiary/:id
+// ==========================================
+
+router.get("/beneficiary/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
+                message: "Invalid beneficiary ID."
+            });
+        }
+
+        const beneficiary = await Beneficiary.findById(id)
+            .select("_id rationCardNumber fullName status")
+            .lean();
+
+        if (!beneficiary) {
+            return res.status(404).json({
+                message: "Beneficiary not found."
+            });
+        }
+
+        const distributions = await Distribution.find({
+            beneficiary: beneficiary._id
+        })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return res.status(200).json({
+            beneficiary: {
+                id: beneficiary._id,
+                rationCardNumber: beneficiary.rationCardNumber,
+                fullName: beneficiary.fullName
+            },
+            distributions
+        });
+    } catch (error) {
+        console.error(
+            "Fetch beneficiary distributions error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            message: "Failed to fetch beneficiary distribution history."
         });
     }
 });

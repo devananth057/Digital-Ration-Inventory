@@ -725,3 +725,156 @@
   outline: 2px solid #5575f8;
   outline-offset: 3px;
 }
+
+.logout-button {
+  padding: 8px 14px;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.logout-button:hover {
+  background: #ef4444;
+  color: white;
+}
+.topbar-user-section {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.topbar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topbar-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #172b4d;
+}
+
+.topbar-user-role {
+  font-size: 11px;
+  color: #8993a8;
+  text-transform: capitalize;
+}
+
+.logout-button {
+  padding: 10px 16px;
+  border: 1px solid #ff4d4f;
+  border-radius: 9px;
+  background: white;
+  color: #ff4d4f;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #fff1f0;
+}
+/* RationFlow login pages */
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f4f7f5;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px;
+  border: 1px solid #e2e8e5;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgba(20, 50, 35, 0.08);
+}
+
+.login-card h1 {
+  margin: 0;
+  color: #166534;
+  font-size: 30px;
+}
+
+.login-card h2 {
+  margin: 12px 0 4px;
+  color: #1f2937;
+}
+
+.login-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.login-card label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.login-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.login-card button {
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #166534;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-card button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.login-card .login-role-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+}
+
+.login-role-button span {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.login-card .back-button {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.login-card .login-error {
+  color: #b91c1c;
+  font-size: 14px;
+}

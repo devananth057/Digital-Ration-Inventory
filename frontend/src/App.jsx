@@ -1,5 +1,17 @@
 import { useMemo, useState, useEffect } from "react";
-import { NavLink, Routes, Route, useLocation } from "react-router-dom";
+import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
+import BeneficiaryLogin from "./pages/BeneficiaryLogin";
+import EmployeeLogin from "./pages/EmployeeLogin";
+import BeneficiaryDashboard from "./pages/BeneficiaryDashboard";
+import {
+  NavLink,
+  Routes,
+  Route,
+  useLocation,
+  Navigate
+} from "react-router-dom";
+
 import {
   LayoutDashboard, UsersRound, CreditCard, Boxes, ShoppingBasket, ReceiptText,
   ChartNoAxesCombined, UserCog, Bell, Settings, Search, ChevronDown, Menu,
@@ -12,6 +24,8 @@ import {
   BarChart, Bar
 } from "recharts";
 import { beneficiaries, inventory, transactions } from "./data/mockData";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const navGroups = [
   { label: "OVERVIEW", items: [{ label: "Dashboard", path: "/", icon: LayoutDashboard }] },
@@ -40,54 +54,254 @@ const itemData = [
   { name: "Wheat", issued: 180 }, { name: "Kerosene", issued: 95 }
 ];
 
+
 function Sidebar({ mobileOpen, closeMobile, lowStockCount = 0 }) {
-  return <>
-    {mobileOpen && <button className="mobile-scrim" onClick={closeMobile} aria-label="Close navigation" />}
-    <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
-      <div className="brand">
-        <div className="brand-mark"><Wheat size={23} /></div>
-        <div><div className="brand-name">Ration<span>Flow</span></div><div className="brand-subtitle">SHOP MANAGEMENT</div></div>
-        <button className="icon-button mobile-close" onClick={closeMobile}><X size={18} /></button>
-      </div>
-      <div className="shop-switcher">
-        <div className="shop-avatar">RS</div>
-        <div className="shop-info"><strong>Coimbatore Shop</strong><span>Shop ID · TN-CBE-042</span></div>
-        <ChevronDown size={16} className="muted" />
-      </div>
-      <nav className="nav-list">
-        {navGroups.map(group => <div className="nav-group" key={group.label}>
-          <div className="nav-heading">{group.label}</div>
-          {group.items.map(item => <NavLink key={item.path} to={item.path} end={item.path === "/"} onClick={closeMobile} className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
-            <item.icon size={18} strokeWidth={1.9} /><span>{item.label}</span>
-            {item.label === "Notifications" && lowStockCount > 0 && (
-  <span className="nav-count">{lowStockCount}</span>
-)}
-          </NavLink>)}
-        </div>)}
-      </nav>
-      <div className="sidebar-bottom">
-        <div className="help-card"><div className="help-icon"><CircleHelp size={18} /></div><div><strong>Need help?</strong><span>Visit help centre</span></div><ChevronRight size={16} /></div>
-        <NavLink to="/settings" className="nav-item settings-link"><Settings size={18} /><span>Settings</span></NavLink>
-        <div className="sidebar-footer"><span className="online-dot" /> All systems operational <span className="version">v1.0.0</span></div>
-      </div>
-    </aside>
-  </>;
+  let user = null;
+
+  try {
+    user = JSON.parse(
+      sessionStorage.getItem("rationflowUser") || "null"
+    );
+  } catch {
+    user = null;
+  }
+
+  const isAdmin = user?.role === "Admin";
+
+  // Employees cannot access Employee Management or Settings.
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (
+          !isAdmin &&
+          ["/employees", "/settings"].includes(item.path)
+        ) {
+          return false;
+        }
+
+        return true;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  return (
+    <>
+      {mobileOpen && (
+        <button
+          className="mobile-scrim"
+          onClick={closeMobile}
+          aria-label="Close navigation"
+        />
+      )}
+
+      <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
+        <div className="brand">
+          <div className="brand-mark">
+            <Wheat size={23} />
+          </div>
+
+          <div>
+            <div className="brand-name">
+              Ration<span>Flow</span>
+            </div>
+            <div className="brand-subtitle">SHOP MANAGEMENT</div>
+          </div>
+
+          <button
+            className="icon-button mobile-close"
+            onClick={closeMobile}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="shop-switcher">
+          <div className="shop-avatar">RS</div>
+
+          <div className="shop-info">
+            <strong>Coimbatore Shop</strong>
+            <span>Shop ID · TN-CBE-042</span>
+          </div>
+
+          <ChevronDown size={16} className="muted" />
+        </div>
+
+        <nav className="nav-list">
+          {visibleNavGroups.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <div className="nav-heading">{group.label}</div>
+
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === "/"}
+                  onClick={closeMobile}
+                  className={({ isActive }) =>
+                    `nav-item ${isActive ? "active" : ""}`
+                  }
+                >
+                  <item.icon size={18} strokeWidth={1.9} />
+
+                  <span>{item.label}</span>
+
+                  {item.label === "Notifications" &&
+                    lowStockCount > 0 && (
+                      <span className="nav-count">
+                        {lowStockCount}
+                      </span>
+                    )}
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="help-card">
+            <div className="help-icon">
+              <CircleHelp size={18} />
+            </div>
+
+            <div>
+              <strong>Need help?</strong>
+              <span>Visit help centre</span>
+            </div>
+
+            <ChevronRight size={16} />
+          </div>
+
+          {isAdmin && (
+            <NavLink
+              to="/settings"
+              className="nav-item settings-link"
+              onClick={closeMobile}
+            >
+              <Settings size={18} />
+              <span>Settings</span>
+            </NavLink>
+          )}
+
+          <div className="sidebar-footer">
+            <span className="online-dot" />
+            All systems operational
+            <span className="version">v1.0.0</span>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
 }
 
 function Topbar({ onMenu }) {
   const location = useLocation();
-  const current = navGroups.flatMap(g => g.items).find(i => i.path === location.pathname);
+
+  const current = navGroups
+    .flatMap(g => g.items)
+    .find(i => i.path === location.pathname);
+
   const title = current?.label || "Dashboard";
-  return <header className="topbar">
-    <div className="topbar-left"><button className="icon-button menu-toggle" onClick={onMenu}><Menu size={21} /></button><div><div className="breadcrumb">Workspace <ChevronRight size={13} /> <span>{title}</span></div><div className="topbar-title">{title}</div></div></div>
-    <div className="topbar-actions">
-      <div className="date-chip"><CalendarDays size={15} /><span>29 October 2026</span></div>
-      <button className="icon-button notification-button" aria-label="Notifications"><Bell size={19} /><i /></button>
-      <div className="topbar-divider" />
-      <button className="profile-button"><div className="profile-avatar">DP</div><div className="profile-text"><strong>Devananth P K</strong><span>Administrator</span></div><ChevronDown size={15} /></button>
-    </div>
-  </header>;
+
+  // Get the logged-in user's details
+  let user = null;
+
+  try {
+    user = JSON.parse(
+      sessionStorage.getItem("rationflowUser") || "null"
+    );
+  } catch {
+    user = null;
+  }
+
+  const displayName =
+    user?.fullName ||
+    user?.name ||
+    (user?.role === "Admin" ? "Devananth P K" : user?.employeeId) ||
+    "User";
+
+  const displayRole =
+    user?.role === "Admin"
+      ? "Administrator"
+      : user?.role || "User";
+
+  const avatarText = displayName
+    .split(" ")
+    .filter(Boolean)
+    .map(part => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("rationflowToken");
+    sessionStorage.removeItem("rationflowUser");
+    window.location.href = "/login";
+  };
+
+  return (
+    <header className="topbar">
+      <div className="topbar-left">
+        <button
+          className="icon-button menu-toggle"
+          onClick={onMenu}
+        >
+          <Menu size={21} />
+        </button>
+
+        <div>
+          <div className="breadcrumb">
+            Workspace <ChevronRight size={13} /> <span>{title}</span>
+          </div>
+          <div className="topbar-title">{title}</div>
+        </div>
+      </div>
+
+      <div className="topbar-actions">
+        <div className="date-chip">
+          <CalendarDays size={15} />
+          <span>29 October 2026</span>
+        </div>
+
+        <button
+          className="icon-button notification-button"
+          aria-label="Notifications"
+          title="View Notifications"
+          onClick={() => {
+            window.location.href = "/notifications";
+          }}
+        >
+          <Bell size={19} />
+          <i />
+        </button>
+
+        <div className="topbar-divider" />
+
+        <button className="profile-button" type="button">
+          <div className="profile-avatar">
+            {avatarText || "U"}
+          </div>
+
+          <div className="profile-text">
+            <strong>{displayName}</strong>
+            <span>{displayRole}</span>
+          </div>
+
+          <ChevronDown size={15} />
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className="logout-button"
+          title="Logout"
+        >
+          Logout
+        </button>
+      </div>
+    </header>
+  );
 }
+
 
 function StatCard({ title, value, change, trend, note, icon: Icon, tone }) {
   return <div className="stat-card">
@@ -111,7 +325,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API = "http://localhost:5000/api";
+  const API = `${API_BASE_URL}/api`;
 
   useEffect(() => {
     async function loadDashboard() {
@@ -262,22 +476,49 @@ function Dashboard() {
   return (
     <div className="page-content">
       <div className="welcome-row">
-        <div>
-          <div className="eyebrow">
-            <span className="live-dot" />
-            {today.toLocaleDateString("en-IN", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }).toUpperCase()}
-          </div>
-          <h1>
-            Good {today.getHours() < 12 ? "morning" : today.getHours() < 17 ? "afternoon" : "evening"}, Devananth{" "}
-            <span className="wave">✦</span>
-          </h1>
-          <p>Here's what's happening at your ration shop today.</p>
-        </div>
+      
+<div>
+  <div className="eyebrow">
+    <span className="live-dot" />
+    {today.toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).toUpperCase()}
+  </div>
+
+  <h1>
+    Good{" "}
+    {today.getHours() < 12
+      ? "morning"
+      : today.getHours() < 17
+      ? "afternoon"
+      : "evening"}
+    ,{" "}
+    {(() => {
+      try {
+        const user = JSON.parse(
+          sessionStorage.getItem("rationflowUser") || "null"
+        );
+
+        const name =
+          user?.fullName ||
+          user?.name ||
+          (user?.role === "Admin" ? "Devananth P K" : "User");
+
+        return name.split(" ")[0];
+      } catch {
+        return "User";
+      }
+    })()}
+    {" "}
+    <span className="wave">✦</span>
+  </h1>
+
+  <p>Here's what's happening at your ration shop today.</p>
+</div>
+
 
         <button
           className="primary-button"
@@ -657,7 +898,7 @@ function Beneficiaries() {
       setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/beneficiaries"
+        `${API_BASE_URL}/api/beneficiaries`
       );
 
       const data = await response.json();
@@ -714,7 +955,7 @@ function Beneficiaries() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/beneficiaries",
+        `${API_BASE_URL}/api/beneficiaries`,
         {
           method: "POST",
           headers: {
@@ -1075,7 +1316,7 @@ function InventoryPage() {
 
   const [form, setForm] = useState(emptyForm);
 
-  const API = "http://localhost:5000/api/inventory";
+  const API = `${API_BASE_URL}/api/inventory`;
 
   async function fetchInventory() {
     try {
@@ -1564,9 +1805,9 @@ function DistributionPage() {
   const [distribution, setDistribution] = useState(null);
   const [distributedBy, setDistributedBy] = useState("Devananth P K");
 
-  const BENEFICIARY_API = "http://localhost:5000/api/beneficiaries";
-  const INVENTORY_API = "http://localhost:5000/api/inventory";
-  const DISTRIBUTION_API = "http://localhost:5000/api/distributions";
+const BENEFICIARY_API = `${API_BASE_URL}/api/beneficiaries`;
+const INVENTORY_API = `${API_BASE_URL}/api/inventory`;
+const DISTRIBUTION_API = `${API_BASE_URL}/api/distributions`;
 
   async function loadInventory() {
     const response = await fetch(INVENTORY_API);
@@ -2111,7 +2352,7 @@ function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API_URL = "http://localhost:5000/api/distributions";
+  const API_URL = `${API_BASE_URL}/api/distributions`;
 
 function downloadTransactionHistory() {
   if (transactionsList.length === 0) {
@@ -2380,7 +2621,7 @@ function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API = "http://localhost:5000/api";
+  const API = `${API_BASE_URL}/api`;
 
   useEffect(() => {
     async function loadReports() {
@@ -2691,7 +2932,7 @@ function SimplePage({ title, description, icon: Icon, details }) {
       setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/inventory"
+        `${API_BASE_URL}/api/inventory`
       );
 
       const data = await response.json();
@@ -2879,8 +3120,8 @@ function RationCardsPage() {
       setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/beneficiaries"
-      );
+  `${API_BASE_URL}/api/beneficiaries`
+);
 
       const data = await response.json();
 
@@ -3143,7 +3384,7 @@ function Employees() {
       setError('');
 
       const response = await fetch(
-        'http://localhost:5000/api/employees'
+        `${API_BASE_URL}/api/employees`
       );
 
       const data = await response.json();
@@ -3224,8 +3465,8 @@ function Employees() {
       setError('');
 
       const url = editingId
-        ? `http://localhost:5000/api/employees/${editingId}`
-        : 'http://localhost:5000/api/employees';
+        ? `${API_BASE_URL}/api/employees/${editingId}`
+        : `${API_BASE_URL}/api/employees`;
 
       const response = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
@@ -3279,7 +3520,7 @@ function Employees() {
       setError('');
 
       const response = await fetch(
-        `http://localhost:5000/api/employees/${employee._id}`,
+        `${API_BASE_URL}/api/employees/${employee._id}`,
         {
           method: 'PUT',
           headers: {
@@ -3630,7 +3871,7 @@ function Employees() {
 }
 
 function SettingsPage() {
-  const API_URL = 'http://localhost:5000/api/settings';
+  const API_URL = `${API_BASE_URL}/api/settings`;
 
   const defaultSettings = {
     shopName: 'Coimbatore Shop',
@@ -4157,6 +4398,31 @@ function SettingsPage() {
 }
 
 
+function AdminRouteGuard({ children }) {
+  const token = sessionStorage.getItem("rationflowToken");
+
+  let user = null;
+
+  try {
+    user = JSON.parse(
+      sessionStorage.getItem("rationflowUser") || "null"
+    );
+  } catch {
+    user = null;
+  }
+
+  const allowedRoles = ["Admin", "Manager", "Staff"];
+
+  if (!token || !user || !allowedRoles.includes(user.role)) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+
+
+
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
@@ -4165,7 +4431,7 @@ function App() {
     async function fetchLowStockCount() {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/inventory"
+          `${API_BASE_URL}/api/inventory`
         );
 
         if (!response.ok) {
@@ -4196,65 +4462,104 @@ function App() {
   }, []);
 
   return (
-    <div className="app-shell">
-      <Sidebar
-        mobileOpen={mobileOpen}
-        closeMobile={() => setMobileOpen(false)}
-        lowStockCount={lowStockCount}
-      />
+  <Routes>
+    {/* Login selection page */}
+    <Route path="/login" element={<Login />} />
 
-      <div className="app-main">
-        <Topbar onMenu={() => setMobileOpen(true)} />
+    {/* Beneficiary login */}
+    <Route
+      path="/beneficiary-login"
+      element={<BeneficiaryLogin />}
+    />
+    <Route
+  path="/beneficiary-dashboard"
+  element={<BeneficiaryDashboard />}
+/>
 
-        <main>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/beneficiaries" element={<Beneficiaries />} />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/distribution" element={<DistributionPage />} />
-            <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/ration-cards" element={<RationCardsPage />} />
-            <Route path="/employees" element={<Employees />} />
+    {/* Employee login */}
+    <Route
+      path="/employee-login"
+      element={<EmployeeLogin />}
+    />
 
-            <Route
-              path="/notifications"
-              element={
-                <SimplePage
-                  title="Notifications"
-                  description="Review low-stock alerts and operational reminders."
-                  icon={Bell}
-                  details="Monitor minimum-stock alerts and reminders generated from verified application data."
+    {/* Admin login - implementation comes next */}
+    {/* Admin login */}
+<Route
+  path="/admin-login"
+  element={<AdminLogin />}
+/>
+    {/* Existing Admin dashboard */}
+    <Route
+      path="/*"
+      element={
+        <AdminRouteGuard>
+        <div className="app-shell">
+        
+          <Sidebar
+            mobileOpen={mobileOpen}
+            closeMobile={() => setMobileOpen(false)}
+            lowStockCount={lowStockCount}
+          />
+
+          <div className="app-main">
+            <Topbar onMenu={() => setMobileOpen(true)} />
+
+            <main>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/beneficiaries" element={<Beneficiaries />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/distribution" element={<DistributionPage />} />
+                <Route path="/transactions" element={<TransactionsPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/ration-cards" element={<RationCardsPage />} />
+                <Route path="/employees" element={<Employees />} />
+                
+
+                <Route
+                  path="/notifications"
+                  element={
+                    <SimplePage
+                      title="Notifications"
+                      description="Review low-stock alerts and operational reminders."
+                      icon={Bell}
+                      details="Monitor minimum-stock alerts and reminders generated from verified application data."
+                    />
+                  }
                 />
-              }
-            />
 
-            <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
 
-            <Route
-              path="*"
-              element={
-                <SimplePage
-                  title="Page not found"
-                  description="The requested page does not exist."
-                  icon={CircleHelp}
-                  details="Use the sidebar to navigate to an available page."
+                <Route
+                  path="*"
+                  element={
+                    <SimplePage
+                      title="Page not found"
+                      description="The requested page does not exist."
+                      icon={CircleHelp}
+                      details="Use the sidebar to navigate to an available page."
+                    />
+                  }
                 />
-              }
-            />
-          </Routes>
-        </main>
+              </Routes>
+            </main>
 
-        <footer className="app-footer">
-          <span>© 2026 RationFlow · Digital Ration Shop Management</span>
-          <span>
-            <span className="online-dot" /> Secure workspace
-            <span className="footer-separator">·</span> Built for Team 23
-          </span>
-        </footer>
-      </div>
-    </div>
-  );
+            <footer className="app-footer">
+              <span>
+                © 2026 RationFlow · Digital Ration Shop Management
+              </span>
+              <span>
+                <span className="online-dot" /> Secure workspace
+                <span className="footer-separator">·</span> Built for Team 23
+              </span>
+            </footer>
+          </div>
+        </div>
+        </AdminRouteGuard>
+      }
+    />
+  </Routes>
+);
 }
 
 export default App;
