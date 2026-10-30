@@ -21,7 +21,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/settings', settingsRoutes);
 // Connect to MongoDB
 mongoose
-    .connect(process.env.MONGO_URI)
+    .connect(process.env.MONGO_DB_URI)
     .then(() => {
         console.log("MongoDB connected successfully!");
 
