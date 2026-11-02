@@ -53,8 +53,7 @@ const itemData = [
   { name: "Rice", issued: 420 }, { name: "Sugar", issued: 210 },
   { name: "Wheat", issued: 180 }, { name: "Kerosene", issued: 95 }
 ];
-
-
+const KG_PER_FAMILY_MEMBER = 3;
 function Sidebar({ mobileOpen, closeMobile, lowStockCount = 0 }) {
   let user = null;
 
@@ -67,23 +66,22 @@ function Sidebar({ mobileOpen, closeMobile, lowStockCount = 0 }) {
   }
 
   const isAdmin = user?.role === "Admin";
+// Employees cannot see Inventory, Employee Management, or Settings.
+const visibleNavGroups = navGroups
+  .map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      if (
+        !isAdmin &&
+        ["/inventory", "/employees", "/settings"].includes(item.path)
+      ) {
+        return false;
+      }
 
-  // Employees cannot access Employee Management or Settings.
-  const visibleNavGroups = navGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (
-          !isAdmin &&
-          ["/employees", "/settings"].includes(item.path)
-        ) {
-          return false;
-        }
-
-        return true;
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+      return true;
+    }),
+  }))
+  .filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -1879,35 +1877,60 @@ const DISTRIBUTION_API = `${API_BASE_URL}/api/distributions`;
   }
 
   function toggleItem(item) {
-    setSelectedItems((current) => {
-      const exists = current.find((selected) => selected.id === item.id);
-
-      if (exists) {
-        return current.filter((selected) => selected.id !== item.id);
-      }
-
-      return [
-        ...current,
-        {
-          id: item.id,
-          name: item.name,
-          quantity: 1,
-          unit: item.unit,
-          pricePerUnit: item.pricePerUnit,
-        },
-      ];
-    });
-  }
-
-  function changeQuantity(id, value) {
-    setSelectedItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? { ...item, quantity: value }
-          : item
-      )
+  setSelectedItems((current) => {
+    const exists = current.some(
+      (selected) => selected.id === item.id
     );
-  }
+
+    if (exists) {
+      return current.filter(
+        (selected) => selected.id !== item.id
+      );
+    }
+
+    const quantity =
+      Number(found?.familyMembers) * KG_PER_FAMILY_MEMBER;
+
+    if (!found || quantity <= 0) {
+      setError("Invalid beneficiary family size.");
+      return current;
+    }
+
+    if (quantity > Number(item.quantity)) {
+      setError(
+        `Insufficient stock for ${item.name}. Required: ${quantity} kg; available: ${item.quantity} ${item.unit}.`
+      );
+      return current;
+    }
+
+    setError("");
+
+    return [
+      ...current,
+      {
+        id: item.id,
+        name: item.name,
+        quantity,
+        unit: item.unit,
+        pricePerUnit: Number(item.pricePerUnit),
+      },
+    ];
+  });
+}
+
+function changeQuantity(itemId, value) {
+  const quantity = Number(value);
+
+  setSelectedItems((current) =>
+    current.map((item) =>
+      item.id === itemId
+        ? { ...item, quantity }
+        : item
+    )
+  );
+}
+
+
 
   const totalAmount = selectedItems.reduce(
     (total, item) =>
