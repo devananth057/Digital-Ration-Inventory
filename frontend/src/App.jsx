@@ -1918,17 +1918,7 @@ const DISTRIBUTION_API = `${API_BASE_URL}/api/distributions`;
   });
 }
 
-function changeQuantity(itemId, value) {
-  const quantity = Number(value);
 
-  setSelectedItems((current) =>
-    current.map((item) =>
-      item.id === itemId
-        ? { ...item, quantity }
-        : item
-    )
-  );
-}
 
 
 
